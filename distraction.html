@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>FocusFlow — Distraction Log</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-deep: #0a0e1a;
+      --bg-card: rgba(255,255,255,0.04);
+      --bg-card-hover: rgba(255,255,255,0.07);
+      --accent-pink: #f72585;
+      --accent-blue: #4cc9f0;
+      --accent-green: #06d6a0;
+      --accent-yellow: #ffd166;
+      --accent-purple: #b5179e;
+      --accent-orange: #ef7c00;
+      --text-white: #ffffff;
+      --text-muted: rgba(255,255,255,0.5);
+      --border: rgba(255,255,255,0.1);
+    }
+
+    html, body {
+      min-height: 100%;
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg-deep);
+      color: var(--text-white);
+    }
+
+    /* ── Background ── */
+    .bg-canvas {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      background:
+        radial-gradient(ellipse 50% 60% at 0% 30%, #0d1b2a 0%, transparent 60%),
+        radial-gradient(ellipse 40% 40% at 100% 70%, #1a0a2e 0%, transparent 55%),
+        radial-gradient(ellipse 30% 50% at 50% 100%, #07102a 0%, transparent 50%),
+        #0a0e1a;
+    }
+    .bg-glow {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0.12;
+      pointer-events: none;
+    }
+    .glow1 { width: 600px; height: 300px; background: #4cc9f0; top: 0; left: 20%; }
+    .glow2 { width: 400px; height: 400px; background: #f72585; bottom: 0; right: 10%; }
+
+    /* ── Layout ── */
+    .page {
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Nav ── */
+    nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 24px 40px;
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-logo {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: var(--text-white);
+      text-decoration: none;
+    }
+    .nav-logo span { color: #4cc9f0; }
+    .nav-links { display: flex; gap: 12px; }
+    .nav-btn {
+      font-size: 0.85rem;
+      font-weight: 500;
+      padding: 9px 20px;
+      border-radius: 100px;
+      border: 1.5px solid var(--border);
+      color: var(--text-white);
+      background: transparent;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+    .nav-btn:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.3); }
+    .nav-btn.active { background: rgba(76,201,240,0.15); color: var(--accent-blue); border-color: var(--accent-blue); }
+
+    /* ── Main ── */
+    main {
+      flex: 1;
+      max-width: 860px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 40px 24px 60px;
+    }
+
+    /* ── Page header ── */
+    .page-header {
+      margin-bottom: 36px;
+    }
+    .page-header h1 {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(1.8rem, 4vw, 2.6rem);
+      font-weight: 800;
+      line-height: 1.1;
+      margin-bottom: 8px;
+    }
+    .page-header h1 span { color: var(--accent-blue); }
+    .page-header p { color: var(--text-muted); font-size: 0.92rem; line-height: 1.6; }
+
+    /* ── Log entry form ── */
+    .log-form {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 28px;
+      margin-bottom: 32px;
+      backdrop-filter: blur(10px);
+    }
+    .form-title {
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+    }
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+    @media (max-width: 560px) { .form-row { grid-template-columns: 1fr; } }
+
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-group.full { grid-column: 1 / -1; }
+    .form-label {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      letter-spacing: 0.5px;
+    }
+
+    .form-select, .form-input, .form-textarea {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 12px;
+      color: var(--text-white);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.9rem;
+      padding: 12px 16px;
+      outline: none;
+      transition: border-color 0.2s, background 0.2s;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+    .form-select:focus, .form-input:focus, .form-textarea:focus {
+      border-color: var(--accent-blue);
+      background: rgba(76,201,240,0.06);
+    }
+    .form-select option { background: #1a1a2e; color: #fff; }
+
+    .select-wrap { position: relative; }
+    .select-wrap::after {
+      content: '▾';
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      pointer-events: none;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+
+    .form-textarea { resize: vertical; min-height: 80px; }
+
+    /* ── Category color dots ── */
+    .cat-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+    .cat-pill {
+      padding: 7px 16px;
+      border-radius: 100px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1.5px solid transparent;
+      transition: all 0.2s;
+      opacity: 0.5;
+    }
+    .cat-pill.selected { opacity: 1; box-shadow: 0 0 14px rgba(255,255,255,0.1); }
+    .cat-pill[data-cat="Wandering Thought"] { background: rgba(181,23,158,0.2); border-color: #b5179e; color: #e175d9; }
+    .cat-pill[data-cat="Wandering Thought"].selected { background: rgba(181,23,158,0.35); }
+    .cat-pill[data-cat="Noise"] { background: rgba(255,209,102,0.15); border-color: #ffd166; color: #ffd166; }
+    .cat-pill[data-cat="Noise"].selected { background: rgba(255,209,102,0.3); }
+    .cat-pill[data-cat="Social Media"] { background: rgba(247,37,133,0.15); border-color: #f72585; color: #ff6eb4; }
+    .cat-pill[data-cat="Social Media"].selected { background: rgba(247,37,133,0.3); }
+    .cat-pill[data-cat="Phone"] { background: rgba(76,201,240,0.15); border-color: #4cc9f0; color: #4cc9f0; }
+    .cat-pill[data-cat="Phone"].selected { background: rgba(76,201,240,0.3); }
+    .cat-pill[data-cat="Other"] { background: rgba(239,124,0,0.15); border-color: #ef7c00; color: #efae60; }
+    .cat-pill[data-cat="Other"].selected { background: rgba(239,124,0,0.3); }
+
+    .btn-log {
+      width: 100%;
+      padding: 15px;
+      border-radius: 12px;
+      border: none;
+      background: var(--accent-blue);
+      color: #0a0e1a;
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 700;
+      font-size: 0.95rem;
+      cursor: pointer;
+      letter-spacing: 0.3px;
+      transition: opacity 0.2s, transform 0.15s;
+    }
+    .btn-log:hover { opacity: 0.85; transform: scale(1.01); }
+    .btn-log:active { transform: scale(0.98); }
+
+    /* ── Stats strip ── */
+    .stats-strip {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 14px;
+      margin-bottom: 32px;
+    }
+    .stat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 18px 20px;
+      text-align: center;
+      transition: background 0.2s;
+    }
+    .stat-card:hover { background: var(--bg-card-hover); }
+    .stat-value {
+      font-family: 'Syne', sans-serif;
+      font-size: 2rem;
+      font-weight: 800;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+    .stat-label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+
+    /* ── Filter bar ── */
+    .filter-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .filter-label { font-size: 0.8rem; color: var(--text-muted); }
+    .filter-btn {
+      padding: 6px 14px;
+      border-radius: 100px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 0.78rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: 'DM Sans', sans-serif;
+    }
+    .filter-btn:hover { border-color: rgba(255,255,255,0.3); color: #fff; }
+    .filter-btn.active { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.4); color: #fff; }
+    .btn-clear-all {
+      margin-left: auto;
+      padding: 6px 14px;
+      border-radius: 100px;
+      border: 1px solid rgba(247,37,133,0.3);
+      background: transparent;
+      color: rgba(247,37,133,0.7);
+      font-size: 0.78rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: 'DM Sans', sans-serif;
+    }
+    .btn-clear-all:hover { border-color: var(--accent-pink); color: var(--accent-pink); background: rgba(247,37,133,0.08); }
+
+    /* ── Log list ── */
+    .log-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .log-empty {
+      text-align: center;
+      color: var(--text-muted);
+      padding: 60px 20px;
+      font-size: 0.9rem;
+    }
+    .log-empty-icon { font-size: 3rem; display: block; margin-bottom: 12px; opacity: 0.4; }
+
+    .log-entry {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px 20px;
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      animation: slideIn 0.3s ease;
+      transition: background 0.2s;
+    }
+    .log-entry:hover { background: var(--bg-card-hover); }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(-8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .entry-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      margin-top: 5px;
+    }
+    .entry-body { flex: 1; min-width: 0; }
+    .entry-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 4px;
+      flex-wrap: wrap;
+    }
+    .entry-cat {
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+    .entry-time {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+    .entry-note {
+      font-size: 0.88rem;
+      color: rgba(255,255,255,0.75);
+      line-height: 1.5;
+      word-break: break-word;
+    }
+    .entry-delete {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 1rem;
+      padding: 4px;
+      border-radius: 6px;
+      transition: color 0.2s, background 0.2s;
+      flex-shrink: 0;
+      opacity: 0;
+      transition: opacity 0.2s, color 0.2s;
+    }
+    .log-entry:hover .entry-delete { opacity: 1; }
+    .entry-delete:hover { color: var(--accent-pink); background: rgba(247,37,133,0.1); }
+
+    /* Category color map */
+    .cat-color-Wandering\ Thought { color: #e175d9; }
+    .dot-Wandering\ Thought { background: #b5179e; }
+    .cat-color-Noise { color: #ffd166; }
+    .dot-Noise { background: #ffd166; }
+    .cat-color-Social\ Media { color: #ff6eb4; }
+    .dot-Social\ Media { background: #f72585; }
+    .cat-color-Phone { color: #4cc9f0; }
+    .dot-Phone { background: #4cc9f0; }
+    .cat-color-Other { color: #efae60; }
+    .dot-Other { background: #ef7c00; }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed;
+      bottom: 32px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: #111;
+      color: #fff;
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 14px;
+      padding: 14px 28px;
+      font-size: 0.9rem;
+      z-index: 200;
+      transition: transform 0.3s ease;
+      white-space: nowrap;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+
+    @media (max-width: 600px) {
+      nav { padding: 16px 16px; }
+      main { padding: 24px 16px 48px; }
+    }
+  </style>
+</head>
+<body>
+<div class="bg-canvas"></div>
+<div class="bg-glow glow1"></div>
+<div class="bg-glow glow2"></div>
+
+<div class="page">
+  <nav>
+    <a href="index.html" class="nav-logo">Focus<span>Flow</span></a>
+    <div class="nav-links">
+      <a href="index.html" class="nav-btn">Timer</a>
+      <a href="distraction.html" class="nav-btn active">Distraction Log</a>
+    </div>
+  </nav>
+
+  <main>
+    <div class="page-header">
+      <h1>Distraction <span>Log</span></h1>
+      <p>Track what pulls your focus away. Patterns become visible — and then manageable.</p>
+    </div>
+
+    <!-- Entry form -->
+    <div class="log-form">
+      <div class="form-title">Log a new distraction</div>
+
+      <!-- Category pills -->
+      <div class="cat-pills" id="catPills">
+        <button class="cat-pill" data-cat="Wandering Thought" onclick="selectCat(this)">💭 Wandering Thought</button>
+        <button class="cat-pill" data-cat="Noise" onclick="selectCat(this)">🔊 Noise</button>
+        <button class="cat-pill" data-cat="Social Media" onclick="selectCat(this)">📱 Social Media</button>
+        <button class="cat-pill" data-cat="Phone" onclick="selectCat(this)">📞 Phone</button>
+        <button class="cat-pill" data-cat="Other" onclick="selectCat(this)">✦ Other</button>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Category</label>
+          <div class="select-wrap">
+            <select class="form-select" id="catSelect" onchange="syncCatSelect()">
+              <option value="">— Select category —</option>
+              <option value="Wandering Thought">💭 Wandering Thought</option>
+              <option value="Noise">🔊 Noise</option>
+              <option value="Social Media">📱 Social Media</option>
+              <option value="Phone">📞 Phone</option>
+              <option value="Other">✦ Other</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Severity</label>
+          <div class="select-wrap">
+            <select class="form-select" id="sevSelect">
+              <option value="Low">Low — Barely noticed</option>
+              <option value="Medium" selected>Medium — Lost some focus</option>
+              <option value="High">High — Had to restart</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group full">
+          <label class="form-label">Note <span style="opacity:0.5;font-weight:400">(optional)</span></label>
+          <textarea class="form-textarea" id="noteInput" placeholder="What happened? e.g. started thinking about weekend plans..."></textarea>
+        </div>
+      </div>
+
+      <button class="btn-log" onclick="logDistraction()">+ Log Distraction</button>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-strip" id="statsStrip">
+      <div class="stat-card">
+        <div class="stat-value" id="statTotal" style="color:#4cc9f0">0</div>
+        <div class="stat-label">Total Logged</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="statTop" style="color:#e175d9">—</div>
+        <div class="stat-label">Top Category</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="statToday" style="color:#ffd166">0</div>
+        <div class="stat-label">Today</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="statHigh" style="color:#f72585">0</div>
+        <div class="stat-label">High Severity</div>
+      </div>
+    </div>
+
+    <!-- Filter bar -->
+    <div class="filter-bar">
+      <span class="filter-label">Filter:</span>
+      <button class="filter-btn active" data-filter="All" onclick="setFilter('All', this)">All</button>
+      <button class="filter-btn" data-filter="Wandering Thought" onclick="setFilter('Wandering Thought', this)">💭</button>
+      <button class="filter-btn" data-filter="Noise" onclick="setFilter('Noise', this)">🔊</button>
+      <button class="filter-btn" data-filter="Social Media" onclick="setFilter('Social Media', this)">📱</button>
+      <button class="filter-btn" data-filter="Phone" onclick="setFilter('Phone', this)">📞</button>
+      <button class="filter-btn" data-filter="Other" onclick="setFilter('Other', this)">✦</button>
+      <button class="btn-clear-all" onclick="clearAll()">Clear All</button>
+    </div>
+
+    <!-- Log list -->
+    <div class="log-list" id="logList"></div>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const CAT_COLORS = {
+    'Wandering Thought': '#b5179e',
+    'Noise': '#ffd166',
+    'Social Media': '#f72585',
+    'Phone': '#4cc9f0',
+    'Other': '#ef7c00',
+  };
+  const CAT_TEXT = {
+    'Wandering Thought': '#e175d9',
+    'Noise': '#ffd166',
+    'Social Media': '#ff6eb4',
+    'Phone': '#4cc9f0',
+    'Other': '#efae60',
+  };
+
+  let logs = JSON.parse(localStorage.getItem('focusflow_logs') || '[]');
+  let activeFilter = 'All';
+  let selectedCat = '';
+
+  function saveLogs() { localStorage.setItem('focusflow_logs', JSON.stringify(logs)); }
+
+  function selectCat(el) {
+    document.querySelectorAll('.cat-pill').forEach(p => p.classList.remove('selected'));
+    el.classList.add('selected');
+    selectedCat = el.dataset.cat;
+    document.getElementById('catSelect').value = selectedCat;
+  }
+
+  function syncCatSelect() {
+    const val = document.getElementById('catSelect').value;
+    selectedCat = val;
+    document.querySelectorAll('.cat-pill').forEach(p => {
+      p.classList.toggle('selected', p.dataset.cat === val);
+    });
+  }
+
+  function logDistraction() {
+    const cat = document.getElementById('catSelect').value || selectedCat;
+    if (!cat) { showToast('⚠️ Please select a category first'); return; }
+    const sev = document.getElementById('sevSelect').value;
+    const note = document.getElementById('noteInput').value.trim();
+
+    const entry = {
+      id: Date.now(),
+      cat,
+      sev,
+      note,
+      time: new Date().toISOString()
+    };
+    logs.unshift(entry);
+    saveLogs();
+    updateStats();
+    renderLog();
+
+    // Reset form
+    document.getElementById('catSelect').value = '';
+    document.getElementById('noteInput').value = '';
+    document.querySelectorAll('.cat-pill').forEach(p => p.classList.remove('selected'));
+    selectedCat = '';
+
+    showToast('Logged ✓ Stay focused!');
+  }
+
+  function setFilter(f, el) {
+    activeFilter = f;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    el.classList.add('active');
+    renderLog();
+  }
+
+  function renderLog() {
+    const container = document.getElementById('logList');
+    const filtered = activeFilter === 'All' ? logs : logs.filter(l => l.cat === activeFilter);
+
+    if (filtered.length === 0) {
+      container.innerHTML = `
+        <div class="log-empty">
+          <span class="log-empty-icon">📋</span>
+          ${activeFilter === 'All' ? 'No distractions logged yet.<br>Stay focused — or log one when it happens!' : `No entries for <strong>${activeFilter}</strong>`}
+        </div>`;
+      return;
+    }
+
+    container.innerHTML = filtered.map(entry => {
+      const d = new Date(entry.time);
+      const timeStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' · '
+        + d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+      const dotColor = CAT_COLORS[entry.cat] || '#888';
+      const textColor = CAT_TEXT[entry.cat] || '#ccc';
+      const sevBadge = entry.sev === 'High' ? '🔴' : entry.sev === 'Medium' ? '🟡' : '🟢';
+      return `
+        <div class="log-entry">
+          <div class="entry-dot" style="background:${dotColor}"></div>
+          <div class="entry-body">
+            <div class="entry-header">
+              <span class="entry-cat" style="color:${textColor}">${entry.cat}</span>
+              <span style="font-size:0.72rem;opacity:0.5">${sevBadge} ${entry.sev}</span>
+              <span class="entry-time">${timeStr}</span>
+            </div>
+            ${entry.note ? `<div class="entry-note">${escapeHtml(entry.note)}</div>` : ''}
+          </div>
+          <button class="entry-delete" onclick="deleteEntry(${entry.id})" title="Delete">✕</button>
+        </div>`;
+    }).join('');
+  }
+
+  function deleteEntry(id) {
+    logs = logs.filter(l => l.id !== id);
+    saveLogs();
+    updateStats();
+    renderLog();
+  }
+
+  function clearAll() {
+    if (!confirm('Clear all distraction logs? This cannot be undone.')) return;
+    logs = [];
+    saveLogs();
+    updateStats();
+    renderLog();
+    showToast('All logs cleared');
+  }
+
+  function updateStats() {
+    document.getElementById('statTotal').textContent = logs.length;
+
+    const today = new Date().toDateString();
+    const todayCount = logs.filter(l => new Date(l.time).toDateString() === today).length;
+    document.getElementById('statToday').textContent = todayCount;
+
+    const highCount = logs.filter(l => l.sev === 'High').length;
+    document.getElementById('statHigh').textContent = highCount;
+
+    if (logs.length > 0) {
+      const catCount = {};
+      logs.forEach(l => { catCount[l.cat] = (catCount[l.cat] || 0) + 1; });
+      const top = Object.entries(catCount).sort((a,b) => b[1]-a[1])[0][0];
+      const shortNames = { 'Wandering Thought': 'Wander', 'Social Media': 'Social', 'Noise': 'Noise', 'Phone': 'Phone', 'Other': 'Other' };
+      document.getElementById('statTop').textContent = shortNames[top] || top;
+      document.getElementById('statTop').style.color = CAT_TEXT[top] || '#fff';
+    } else {
+      document.getElementById('statTop').textContent = '—';
+    }
+  }
+
+  function escapeHtml(str) {
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3000);
+  }
+
+  // Init
+  updateStats();
+  renderLog();
+</script>
+</body>
+</html>
