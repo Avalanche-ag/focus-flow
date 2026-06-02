@@ -33,9 +33,10 @@ Or visit: :contentReference[oaicite:1]{index=1}
 ---
 
 ## 📸 Preview
-
-```md
 <img width="2762" height="1616" alt="image" src="https://github.com/user-attachments/assets/e453ab8a-0dd5-4ad3-8f60-bdf496e5a965" />
+```md
+
+![Home Page](./screenshots/home.png)
 
 ```
 
