@@ -34,10 +34,8 @@ Or visit: :contentReference[oaicite:1]{index=1}
 
 ## 📸 Preview
 
-> Add screenshots of your application here.
-
 ```md
-![Home Page](./screenshots/home.png)
+<img width="1394" height="815" alt="Screenshot 2026-06-02 at 12 48 13 PM" src="https://github.com/user-attachments/assets/35cb0691-3970-4f3c-9f0b-a294aae86306" />
 ```
 
 ---
